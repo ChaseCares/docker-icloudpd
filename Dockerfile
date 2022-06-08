@@ -2,7 +2,7 @@
 # Alpine 3.14 & 3.15 - Python 3.9 incompatibility introduced: AttributeError: module 'base64' has no attribute 'decodestring'
 # Alpine Edge        - Python 3.10 incompatibility introduced: ImportError: cannot import name 'Callable' from 'collections' (/usr/lib/python3.10/collections/__init__.py)
 FROM alpine:3.13.5
-MAINTAINER boredazfcuk
+LABEL image.author="boredazfcuk"
 
 ENV config_dir="/config" \
    TZ="UTC"
