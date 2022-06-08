@@ -17,7 +17,7 @@ ARG app_repo="icloud-photos-downloader/icloud_photos_downloader"
 
 RUN echo "$(date '+%d/%m/%Y - %H:%M:%S') | ***** BUILD STARTED FOR ICLOUDPD ${container_version} *****" && \
 echo "$(date '+%d/%m/%Y - %H:%M:%S') | Install build dependencies" && \
-  apk add --no-cache --no-progress --virtual=build-deps ${build_dependencies} && \
+   apk add --no-cache --no-progress --virtual=build-deps ${build_dependencies} && \
 echo "$(date '+%d/%m/%Y - %H:%M:%S') | Install requirements" && \
    apk add --no-progress --no-cache ${app_dependencies} && \
 echo "$(date '+%d/%m/%Y - %H:%M:%S') | Clone ${app_repo}" && \
@@ -39,8 +39,8 @@ COPY --chmod=0755 sync-icloud.sh /usr/local/bin/sync-icloud.sh
 COPY --chmod=0755 healthcheck.sh /usr/local/bin/healthcheck.sh
 
 HEALTHCHECK --start-period=10s --interval=1m --timeout=10s \
-  CMD /usr/local/bin/healthcheck.sh
-  
+   CMD /usr/local/bin/healthcheck.sh
+
 VOLUME "${config_dir}"
 
 CMD /usr/local/bin/sync-icloud.sh
