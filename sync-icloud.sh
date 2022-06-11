@@ -961,6 +961,73 @@ SanitiseLaunchParameters(){
    fi
 }
 
+SSHSetOwnerAndPermissions(){
+   local user=$1
+   local perm=$2
+   local path=$3
+
+   chmod -R $perm $path
+   chown -R $user $path
+}
+
+StartSSHServer(){
+   botUser="$(echo -n "${botUser}")"
+
+   if id ${botUser} &> /dev/null; then  # use the function, save the code
+      LogInfo "SSH: ${botUser} already exists"
+   else
+      LogInfo "SSH: Creating ${botUser}"
+      adduser -h /auto_auth/${botUser} -s /bin/ash -D ${botUser}
+   fi
+
+   LogInfo "SSH: Checking if /auto_auth/${botUser}/.ssh exists"
+   if [[ ! -d "/auto_auth/${botUser}/.ssh" ]]; then
+      LogInfo "SSH: Creating /auto_auth/${botUser}/.ssh"
+      mkdir -p /auto_auth/${botUser}/.ssh
+      SSHSetOwnerAndPermissions "${botUser}" "0700" "/auto_auth/${botUser}/.ssh"
+   fi
+
+   LogInfo "SSH: Creating sshd_config"
+   cat >/etc/ssh/sshd_config <<-HEREDOC
+		PasswordAuthentication no
+		ChallengeResponseAuthentication no
+		PubkeyAuthentication yes
+		UsePAM Yes
+		AuthorizedKeysFile /auto_auth/${botUser}/.ssh/authorized_keys
+		HostKey /auto_auth/${botUser}/etc/ssh/ssh_host_dsa_key
+		HostKey /auto_auth/${botUser}/etc/ssh/ssh_host_ecdsa_key
+		HostKey /auto_auth/${botUser}/etc/ssh/ssh_host_ed25519_key
+		HostKey /auto_auth/${botUser}/etc/ssh/ssh_host_rsa_key
+	HEREDOC
+   SSHSetOwnerAndPermissions "${botUser}" "0600" "/etc/ssh/sshd_config"
+
+   if [ ! -f "/auto_auth/${botUser}/etc/ssh/ssh_host_ed25519_key" ]; then
+      if [[ ! -d "/auto_auth/${botUser}/etc/ssh" ]]; then
+         LogInfo "SSH: Creating /auto_auth/${botUser}/etc/ssh"
+         mkdir -p /auto_auth/${botUser}/etc/ssh
+         SSHSetOwnerAndPermissions "${botUser}" "0700" "/auto_auth/${botUser}/etc/ssh"
+      fi
+
+      LogInfo "SSH: Generrating host keys"
+      ssh-keygen -A -f /auto_auth/${botUser}
+   else
+      LogInfo "SSH: Host keys already exists"
+   fi
+
+   LogInfo "SSH: Checking if authorized_keys exists"
+   if [ ! -f "/auto_auth/${botUser}/.ssh/authorized_keys" ]; then
+      LogInfo "SSH: Creating authorized_keys"
+      sshPub="$(echo -n "${sshPub}")"
+      LogInfo "Key:${sshPub}"
+      mkdir -p /auto_auth/${botUser}/.ssh
+      echo $sshPub > /auto_auth/${botUser}/.ssh/authorized_keys
+      SSHSetOwnerAndPermissions "${botUser}" "0600" "/auto_auth/${botUser}/.ssh/authorized_keys"
+   fi
+
+   LogInfo "SSH: Starting sshd"
+   /usr/sbin/sshd
+}
+
 ##### Script #####
 script_launch_parameters="${1}"
 case  "$(echo ${script_launch_parameters} | tr [:upper:] [:lower:])" in
@@ -1015,4 +1082,7 @@ fi
 CheckMount
 SetOwnerAndPermissions
 CommandLineBuilder
+
+StartSSHServer
+
 SyncUser
